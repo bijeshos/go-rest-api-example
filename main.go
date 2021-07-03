@@ -1,40 +1,79 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
-	"github.com/gorilla/mux"
+	"log"
 	"net/http"
+
+	"github.com/gorilla/mux"
 )
 
-func main() {
-	//create a new router
-	r := mux.NewRouter()
+type Response struct {
+	Persons []Person `json:"persons"`
+}
 
+type Person struct {
+	Id        int    `json:"id"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+}
+
+func main() {
+	log.Println("starting API server")
+	//create a new router
+	router := mux.NewRouter()
+	log.Println("creating routes")
 	//specify endpoints
-	r.HandleFunc("/", HomeHandler)
-	r.HandleFunc("/profile", ProfileHandler)
-	r.HandleFunc("/settings", SettingsHandler)
-	http.Handle("/", r)
+	router.HandleFunc("/health-check", HealthCheck).Methods("GET")
+	router.HandleFunc("/persons", Persons).Methods("GET")
+	http.Handle("/", router)
 
 	//start and listen to requests
-	http.ListenAndServe(":8080", r)
+	http.ListenAndServe(":8080", router)
 
 }
 
-func HomeHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
+func HealthCheck(w http.ResponseWriter, r *http.Request) {
+	log.Println("entering health check end point")
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "Home: %v\n", vars["category"])
+	fmt.Fprintf(w, "API is up and running")
 }
 
-func ProfileHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
+func Persons(w http.ResponseWriter, r *http.Request) {
+	log.Println("entering persons end point")
+	var response Response
+	persons := prepareResponse()
+
+	response.Persons = persons
+
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "Profile: %v\n", vars["category"])
+	jsonResponse, err := json.Marshal(response)
+	if err != nil {
+		return
+	}
+
+	w.Write(jsonResponse)
 }
 
-func SettingsHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "Settings: %v\n", vars["category"])
+func prepareResponse() []Person {
+	var persons []Person
+
+	var person Person
+	person.Id = 1
+	person.FirstName = "Issac"
+	person.LastName = "N"
+	persons = append(persons, person)
+
+	person.Id = 2
+	person.FirstName = "Albert"
+	person.LastName = "E"
+	persons = append(persons, person)
+
+	person.Id = 3
+	person.FirstName = "Thomas"
+	person.LastName = "E"
+	persons = append(persons, person)
+	return persons
 }
